@@ -17,7 +17,7 @@ load_dotenv()
 # ============================================================
 
 model = ChatGroq(
-    model="openai/gpt-oss-120b",
+    model="openai/gpt-oss-20b",
     temperature=0
 )
 

@@ -3305,7 +3305,7 @@ from agents.response_agent import generate_response
 # ============================================================
 
 planner_model = ChatGroq(
-    model="openai/gpt-oss-120b",
+    model="openai/gpt-oss-20b",
     temperature=0
 )
 
@@ -3963,6 +3963,9 @@ def general_node(state: CuraTerraState):
         {}
     )
 
+    recent_messages = state.get("messages", [])[-5:]
+    messages_context = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in recent_messages]) if recent_messages else "None"
+
     prompt = f"""
 You are CuraTera AI's general conversational assistant.
 
@@ -3985,6 +3988,10 @@ Previous agent result:
     ensure_ascii=False,
     default=str
 )}
+
+Recent conversation history:
+
+{messages_context}
 
 Current user message:
 
@@ -4345,6 +4352,9 @@ def planner_node(state: CuraTerraState):
         )
     )
 
+    recent_messages = state.get("messages", [])[-5:]
+    messages_context = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in recent_messages]) if recent_messages else "None"
+
     prompt = f"""
 Current citizen profile:
 
@@ -4373,6 +4383,9 @@ Previous eligibility result exists:
 
 Previous recommendation exists:
 {recommendation_exists}
+
+Recent conversation history:
+{messages_context}
 
 Current user message:
 
@@ -4738,13 +4751,16 @@ def finalize_node(
     # Response Agent
     # --------------------------------------------------------
 
+    recent_messages = state.get("messages", [])[-5:]
+
     response = generate_response(
         task=response_task,
         user_query=user_query,
         specialist_result=outputs,
         profile=profile,
         scheme_id=scheme_id,
-        citations=unique_citations
+        citations=unique_citations,
+        messages=recent_messages
     )
 
     print("\n[RESPONSE AGENT]")
@@ -4758,10 +4774,14 @@ def finalize_node(
         "Final message generated."
     )
 
+    final_resp_dict = response.model_dump()
+    
     return {
-        "final_response": (
-            response.model_dump()
-        )
+        "final_response": final_resp_dict,
+        "messages": [
+            {"role": "user", "content": user_query},
+            {"role": "assistant", "content": final_resp_dict.get("message", str(final_resp_dict))}
+        ]
     }
 
 

@@ -51,7 +51,7 @@ class ResponseMessage(BaseModel):
 # =========================================================
 
 model = ChatGroq(
-    model="openai/gpt-oss-120b",
+    model="openai/gpt-oss-20b",
     temperature=0
 )
 
@@ -314,7 +314,8 @@ def generate_message(
     profile: dict[str, Any] | None = None,
     scheme_id: str | None = None,
     citations: list[dict[str, Any]] | None = None,
-    language: str = "English"
+    language: str = "English",
+    messages: list[dict] | None = None
 ) -> str:
 
     task_instruction = TASK_INSTRUCTIONS.get(
@@ -356,7 +357,12 @@ Before generating the response:
 7. Generate only the final citizen-facing response.
 """
 
+    messages_context = "\n".join([f"{msg['role'].capitalize()}: {msg['content']}" for msg in messages]) if messages else "None"
+
     human_prompt = f"""
+RECENT CONVERSATION HISTORY:
+{messages_context}
+
 USER QUERY:
 {user_query}
 
@@ -631,7 +637,8 @@ def generate_response(
     profile: dict[str, Any] | None = None,
     scheme_id: str | None = None,
     citations: list[dict[str, Any]] | None = None,
-    language: str = "English"
+    language: str = "English",
+    messages: list[dict] | None = None
 ) -> ResponseEnvelope:
 
     # --------------------------------------------------------
@@ -645,7 +652,8 @@ def generate_response(
         profile=profile,
         scheme_id=scheme_id,
         citations=citations,
-        language=language
+        language=language,
+        messages=messages
     )
 
     # --------------------------------------------------------

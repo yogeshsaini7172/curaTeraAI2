@@ -1,0 +1,16 @@
+langchain
+langchain-core
+langchain-community
+langchain-huggingface
+langchain-groq
+langgraph
+langgraph-checkpoint-mongodb
+pymongo
+pydantic
+sentence-transformers
+pandas
+faiss-cpu
+requests
+Flask
+Flask-Cors
+PyJWT

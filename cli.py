@@ -110,3 +110,5 @@ if __name__ == "__main__":
     )
 
     chat(user_id)
+
+# .\venv\Scripts\activate
