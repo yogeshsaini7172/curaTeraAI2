@@ -1,4 +1,5 @@
-from langgraph.checkpoint.memory import InMemorySaver
+from pymongo import MongoClient
+from langgraph.checkpoint.mongodb import MongoDBSaver
 
-
-checkpointer = InMemorySaver()
+client = MongoClient("mongodb://localhost:27017/")
+checkpointer = MongoDBSaver(client, db_name="schemeDatabase")

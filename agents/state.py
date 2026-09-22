@@ -1,8 +1,8 @@
-from typing import TypedDict, Any
-
+from typing import TypedDict, Any, Annotated
+import operator
 
 class CuraTerraState(TypedDict, total=False):
-
+    messages: Annotated[list[dict], operator.add]
     user_query: str
 
     # Profile
