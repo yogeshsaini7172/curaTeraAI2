@@ -30,7 +30,9 @@ from ml.opportunity.government_monitor import GovernmentMonitor
 
 from ml.opportunity.government_monitor import GovernmentMonitor
 
-
+from models.user import users_collection
+from agents.graph import build_graph
+from ml.opportunity.fcm_client import send_push_notification
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -160,6 +162,38 @@ def run_step10_cycle(
 
 
 # ============================================================
+# FETCH REAL CITIZENS FROM DATABASE
+# ============================================================
+
+def fetch_real_citizens() -> list[dict[str, Any]]:
+    print("Fetching citizens from database...")
+    graph = build_graph()
+    citizens = []
+    
+    for user in users_collection.find():
+        email = user.get('email')
+        if not email:
+            continue
+            
+        config = {"configurable": {"thread_id": email}}
+        state = graph.get_state(config)
+        state_values = state.values if state else {}
+        
+        citizen_profile = state_values.get("citizen_profile")
+        if citizen_profile:
+            # FCM token should also be retrieved here when available
+            fcm_token = user.get("fcm_token")
+            citizens.append({
+                "citizen_id": email,
+                "profile": citizen_profile,
+                "fcm_token": fcm_token
+            })
+            
+    print(f"Found {len(citizens)} citizens with profiles.")
+    return citizens
+
+
+# ============================================================
 # RUN ONE UNIFIED CYCLE
 # ============================================================
 
@@ -191,6 +225,17 @@ def run_full_cycle(
 
         print("\nStep 9 Notification:")
         print(notification)
+        
+        # Send push notification via FCM
+        citizen_id = notification.get("citizen_id")
+        title = notification.get("title", "New Opportunity")
+        message = notification.get("message", "")
+        
+        citizen = next((c for c in citizens if c.get("citizen_id") == citizen_id), None)
+        if citizen and citizen.get("fcm_token"):
+            send_push_notification(citizen["fcm_token"], title, message, data=notification)
+        else:
+            print(f"-> Skipping FCM push for {citizen_id} (No token found)")
 
     # --------------------------------------------------------
     # STEP 10
@@ -199,6 +244,21 @@ def run_full_cycle(
     step10_result = run_step10_cycle(
         citizens
     )
+    
+    step10_notifications = step10_result.get("notifications", [])
+    for notification in step10_notifications:
+        print("\nStep 10 Notification:")
+        print(notification)
+
+        citizen_id = notification.get("citizen_id")
+        title = notification.get("title", "Policy Update")
+        message = notification.get("message", "")
+        
+        citizen = next((c for c in citizens if c.get("citizen_id") == citizen_id), None)
+        if citizen and citizen.get("fcm_token"):
+            send_push_notification(citizen["fcm_token"], title, message, data=notification)
+        else:
+            print(f"-> Skipping FCM push for {citizen_id} (No token found)")
 
     # --------------------------------------------------------
     # SUMMARY
@@ -305,39 +365,29 @@ def start_scheduler(
 
 if __name__ == "__main__":
 
-    citizens = [
-
-        {
-            "citizen_id": "C001",
-            "profile": {
-                "age": 14,
-                "gender": "female",
-                "state": "Maharashtra",
-                "district": "Pune",
-                "social_category": "VJNT",
-                "annual_family_income": 60000,
-                "occupation": "Student",
-                "school_class": 9,
-                "student_status": True,
-            },
-        },
-
-        {
-            "citizen_id": "C002",
-            "profile": {
-                "age": 22,
-                "gender": "male",
-                "state": "Maharashtra",
-                "district": "Pune",
-                "social_category": "General",
-                "annual_family_income": 60000,
-                "occupation": "Student",
-                "education_level": "Graduated",
-                "student_status": True,
-            },
-        },
-
-    ]
+    # Fetch real citizens from the database
+    citizens = fetch_real_citizens()
+    
+    # If no citizens are found, use mock data for testing
+    if not citizens:
+        print("No real citizens found, falling back to mock data.")
+        citizens = [
+            {
+                "citizen_id": "test_user@example.com",
+                "fcm_token": "do9KSR7TQDiX10VbOv9CBz:APA91bEFAeMR4_3RJwiJTJ48WFvcfobMnLaYESuGSrGSLMMeqhHm3Zvh92QAnea03O_tSKEGxaKLmiOfNFgvRFKElv4If3K7Y1urgnCaNbpxiI0VovVQvzc",
+                "profile": {
+                    "age": 14,
+                    "gender": "female",
+                    "state": "Maharashtra",
+                    "district": "Pune",
+                    "social_category": "VJNT",
+                    "annual_family_income": 60000,
+                    "occupation": "Student",
+                    "school_class": 9,
+                    "student_status": True,
+                },
+            }
+        ]
 
     # --------------------------------------------------------
     # RUN ONE COMPLETE CYCLE

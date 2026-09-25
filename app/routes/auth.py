@@ -45,6 +45,7 @@ def login():
 
     email = data.get('email')
     password = data.get('password')
+    fcm_token = data.get('fcm_token')
 
     if not email or not password:
         return jsonify({'message': 'Email and password are required'}), 400
@@ -61,5 +62,8 @@ def login():
         'email': user['email'],
         'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=20)
     }, SECRET_KEY, algorithm="HS256")
+
+    #store fcm token of user
+    users_collection.update_one({'email': email}, {'$set': {'fcm_token': fcm_token}})
 
     return jsonify({'token': token, 'message': 'Login successful'}), 200

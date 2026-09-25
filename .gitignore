@@ -29,3 +29,4 @@ vectorstore/
 # Temporary files
 *.tmp
 *.temp
+firebase-adminsdk.json
