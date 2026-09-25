@@ -111,4 +111,11 @@ if __name__ == "__main__":
 
     chat(user_id)
 
-# .\venv\Scripts\activate
+# .\venv\Scripts\python.exe api.py
+# .\venv\Scripts\python.exe ml/opportunity/scheduler
+# cd "C:\Users\ss\OneDrive\SISTec hackathon\CuraTeraApp\android"
+# .\gradlew assembleDebug
+# adb install -r "C:\Users\ss\OneDrive\SISTec hackathon\CuraTeraApp\android\app\build\outputs\apk\debug\app-debug.apk"
+# cd "C:\Users\ss\OneDrive\SISTec hackathon\CuraTeraApp"
+# npx react-native start
+
