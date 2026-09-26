@@ -105,7 +105,7 @@ def chat(user_id: str):
 
 if __name__ == "__main__":
 
-    user_id = input(
+    user_id = input(                                                                            
         "Enter user ID: "
     )
 
