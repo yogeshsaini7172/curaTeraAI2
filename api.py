@@ -7,6 +7,7 @@ load_dotenv()  # Load environment variables from .env file
 
 from app.routes import auth_bp, chat_bp, profile_bp
 from app.routes.schemes import schemes_bp
+from app.routes.tts import tts_bp
 
 app = Flask(__name__)
 # Enable CORS for all routes so the frontend can connect
@@ -17,6 +18,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(schemes_bp)
+app.register_blueprint(tts_bp)
 
 @app.route('/')
 def home():

@@ -52,3 +52,50 @@ def chat_message(current_user):
     except Exception as e:
         print(f"Chat Error: {e}")
         return jsonify({'message': 'An error occurred while processing your message.', 'error': str(e)}), 500
+
+@chat_bp.route('/api/chat/history', methods=['GET'])
+@token_required
+def get_chat_history(current_user):
+    config = {
+        "configurable": {
+            "thread_id": current_user['email']
+        }
+    }
+    
+    try:
+        state = graph.get_state(config)
+        messages_history = []
+        
+        if state and state.values and 'messages' in state.values:
+            for msg in state.values['messages']:
+                # Depending on how messages are stored (dict or LangChain message object)
+                if isinstance(msg, dict):
+                    role = "user" if msg.get("role") in ["user", "human"] else "bot"
+                    content = msg.get("content", "")
+                    msg_id = msg.get("id", f"msg_{len(messages_history)}")
+                else:
+                    role = "user" if msg.type == "human" else "bot"
+                    content = msg.content
+                    msg_id = getattr(msg, "id", f"msg_{len(messages_history)}")
+                
+                # If content is a JSON string of ResponseEnvelope, parse it
+                if role == "bot" and isinstance(content, str) and content.strip().startswith("{"):
+                    try:
+                        import json
+                        parsed_content = json.loads(content)
+                        if "message" in parsed_content:
+                            content = parsed_content["message"]
+                    except:
+                        pass
+                        
+                messages_history.append({
+                    "id": str(msg_id) if msg_id else f"msg_{len(messages_history)}",
+                    "sender": role,
+                    "text": content,
+                })
+                
+        return jsonify({'messages': messages_history}), 200
+        
+    except Exception as e:
+        print(f"History Error: {e}")
+        return jsonify({'error': str(e)}), 500
