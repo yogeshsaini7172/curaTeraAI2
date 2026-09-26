@@ -15,6 +15,7 @@ def signup():
 
     email = data.get('email')
     password = data.get('password')
+    full_name = data.get('full_name') or data.get('name') or (email.split('@')[0] if email else 'User')
 
     if not email or not password:
         return jsonify({'message': 'Email and password are required'}), 400
@@ -28,6 +29,7 @@ def signup():
     hashed_password = generate_password_hash(password)
     new_user = {
         'email': email,
+        'name': full_name,
         'password': hashed_password,
         'role':'user',
         'created_at': datetime.datetime.now(datetime.timezone.utc)
@@ -35,7 +37,7 @@ def signup():
 
     # Save to MongoDB
     users_collection.insert_one(new_user)
-    return jsonify({'message': 'User created successfully'}), 201
+    return jsonify({'message': 'User created successfully', 'user': {'email': email, 'name': full_name}}), 201
 
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
@@ -64,6 +66,14 @@ def login():
     }, SECRET_KEY, algorithm="HS256")
 
     #store fcm token of user
-    users_collection.update_one({'email': email}, {'$set': {'fcm_token': fcm_token}})
+    if fcm_token:
+        users_collection.update_one({'email': email}, {'$set': {'fcm_token': fcm_token}})
 
-    return jsonify({'token': token, 'message': 'Login successful'}), 200
+    return jsonify({
+        'token': token,
+        'message': 'Login successful',
+        'user': {
+            'email': user['email'],
+            'name': user.get('name', user['email'].split('@')[0])
+        }
+    }), 200

@@ -42,11 +42,13 @@ def chat_message(current_user):
             blocks = []
             citations = []
 
-        # Return the AI response without the raw profile data
+        # Return the AI response along with extracted citizen_profile if present
+        updated_profile = result.get("citizen_profile")
         return jsonify({
             'message': ai_message,
             'blocks': blocks,
-            'citations': citations
+            'citations': citations,
+            'citizen_profile': updated_profile
         }), 200
 
     except Exception as e:
