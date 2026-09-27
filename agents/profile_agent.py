@@ -210,7 +210,11 @@ Rules:
 5. Do not invent information.
 6. Detect contradictions.
 7. Do not unnecessarily ask for every possible profile field.
-8. Return structured ProfileAgentOutput.
+8. CRITICAL: The citizen's login 'username' is NEVER their full name. 
+   If a user says "My username is X", DO NOT save X as their fullName.
+   Only extract 'fullName' if they explicitly provide their real name (e.g. "My name is X").
+9. CRITICAL: DO NOT GUESS. If they say "My income is 2 lakh", do not assume it's annual. Ask for clarification. If they say "I live in UP", do not assume district.
+10. Return structured ProfileAgentOutput.
 """
 
     response = profile_agent.invoke(
@@ -223,20 +227,24 @@ Rules:
 
     structured = response["structured_response"]
 
+    updated_fields = structured.profile.model_dump(
+    exclude_none=True
+)
+
+# Merge updated fields with the existing profile
+# so that unchanged fields are preserved.
+    updated_profile = {
+        **current_profile,
+        **updated_fields,
+    }
+
     return {
         "response": structured.response,
 
-        "profile": structured.profile.model_dump(
-            exclude_none=True
-        ),
+        "profile": updated_profile,
 
-        # Keep LLM assessment available for debugging,
-        # but graph.py will calculate the final value.
         "profile_complete": structured.profile_complete,
-
         "profile_valid": structured.profile_valid,
-
         "missing_information": structured.missing_information,
-
         "validation_issues": structured.validation_issues,
     }
