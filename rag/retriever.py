@@ -16,6 +16,16 @@ def load_vectorstore():
     """
 
     if not VECTORSTORE_PATH.exists():
+        try:
+            print(f"[RETRIEVER] Vector store not found at {VECTORSTORE_PATH}. Attempting to build automatically...")
+            from rag.build_vectorstore import build_vectorstore
+            build_vectorstore()
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Vector store not found at {VECTORSTORE_PATH} and auto-build failed: {e}"
+            )
+
+    if not VECTORSTORE_PATH.exists():
         raise FileNotFoundError(
             f"Vector store not found: {VECTORSTORE_PATH}"
         )
