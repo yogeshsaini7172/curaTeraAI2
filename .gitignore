@@ -25,6 +25,7 @@ Thumbs.db
 
 # Local vector/database files
 vectorstore/
+chroma_db/
 
 # Temporary files
 *.tmp

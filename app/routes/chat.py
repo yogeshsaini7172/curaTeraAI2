@@ -6,6 +6,37 @@ from . import chat_bp
 # Build the LangGraph state machine once
 graph = build_graph()
 
+import io
+from flask import send_file
+from gtts import gTTS
+
+@chat_bp.route('/api/chat/tts', methods=['GET'])
+def chat_tts():
+    text = request.args.get('text', '')
+    lang = request.args.get('lang', 'hi')
+    
+    if lang == 'auto':
+        lang = 'hi'
+        
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+        
+    try:
+        tts = gTTS(text=text, lang=lang)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        
+        return send_file(
+            fp,
+            mimetype='audio/mpeg',
+            as_attachment=False,
+            download_name='response.mp3'
+        )
+    except Exception as e:
+        print(f"TTS Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @chat_bp.route('/api/chat/message', methods=['POST'])
 @token_required
 def chat_message(current_user):

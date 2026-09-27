@@ -14,3 +14,11 @@ requests
 Flask
 Flask-Cors
 PyJWT
+numpy
+scikit-learn
+python-dotenv
+pypdf
+firebase-admin
+chromadb
+transformers
+torch

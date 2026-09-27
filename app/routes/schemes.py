@@ -135,6 +135,19 @@ def format_retrieved_scheme(doc):
     required_docs_hi = hi_trans.get("requiredDocsHi") or required_docs
     application_process_hi = hi_trans.get("applicationProcessHi") or application_process
 
+    official_url = "https://www.myscheme.gov.in"
+    raw_text = doc.get("raw_text", "")
+    urls = re.findall(r'\]\((https?://[^)]+)\)', raw_text)
+    if not urls:
+        urls = re.findall(r'(https?://[^\s)\]]+)', raw_text)
+    for u in urls:
+        if not u.lower().endswith(".pdf"):
+            official_url = u
+            break
+    else:
+        if urls:
+            official_url = urls[0]
+
     return {
         "id": scheme_id,
         "titleEn": scheme_name,
@@ -160,7 +173,7 @@ def format_retrieved_scheme(doc):
         "applicationProcess": application_process,
         "applicationProcessEn": application_process,
         "applicationProcessHi": application_process_hi,
-        "officialUrl": "https://www.myscheme.gov.in",
+        "officialUrl": official_url,
         "helplinePhone": "1800115555",
         "themeColor": "#0F172A",
         "themeLight": "#F8FAFC",
