@@ -67,13 +67,6 @@ def login():
         'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=20)
     }, SECRET_KEY, algorithm="HS256")
 
-        'message': 'Login successful',
-        'user': {
-            'email': user['email'],
-            'name': user.get('name', user['email'].split('@')[0])
-        },
-        'email': user['email'],
-        'role': role
     if fcm_token:
         users_collection.update_one({'email': email}, {'$set': {'fcm_token': fcm_token}})
 
