@@ -105,7 +105,7 @@ def chat(user_id: str):
 
 if __name__ == "__main__":
 
-    user_id = input(
+    user_id = input(                                                                            
         "Enter user ID: "
     )
 
@@ -118,4 +118,4 @@ if __name__ == "__main__":
 # adb install -r "C:\Users\ss\OneDrive\SISTec hackathon\CuraTeraApp\android\app\build\outputs\apk\debug\app-debug.apk"
 # cd "C:\Users\ss\OneDrive\SISTec hackathon\CuraTeraApp"
 # npx react-native start
-
+# ipconfig | findstr IPv4
