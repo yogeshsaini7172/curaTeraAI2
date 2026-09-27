@@ -6,7 +6,8 @@ from rag.ingestion import load_rag_documents
 from rag.embeddings import get_embeddings
 
 
-VECTORSTORE_PATH = Path("vectorstore")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+VECTORSTORE_PATH = PROJECT_ROOT / "vectorstore"
 
 
 def build_vectorstore():

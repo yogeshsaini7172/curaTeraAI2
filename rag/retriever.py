@@ -6,7 +6,8 @@ from langchain_community.vectorstores import FAISS
 from rag.embeddings import get_embeddings
 
 
-VECTORSTORE_PATH = Path("vectorstore")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+VECTORSTORE_PATH = PROJECT_ROOT / "vectorstore"
 
 
 @lru_cache(maxsize=1)
@@ -14,6 +15,16 @@ def load_vectorstore():
     """
     Load FAISS only once and reuse it.
     """
+
+    if not VECTORSTORE_PATH.exists():
+        try:
+            print(f"[RETRIEVER] Vector store not found at {VECTORSTORE_PATH}. Attempting to build automatically...")
+            from rag.build_vectorstore import build_vectorstore
+            build_vectorstore()
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Vector store not found at {VECTORSTORE_PATH} and auto-build failed: {e}"
+            )
 
     if not VECTORSTORE_PATH.exists():
         raise FileNotFoundError(

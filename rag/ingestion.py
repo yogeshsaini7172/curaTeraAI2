@@ -8,9 +8,8 @@ from langchain_core.documents import Document
 # Paths
 # --------------------------------------------------
 
-RAG_DOCUMENTS_PATH = Path(
-    "data/rag/rag_documents.json"
-)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+RAG_DOCUMENTS_PATH = PROJECT_ROOT / "data" / "rag" / "rag_documents.json"
 
 
 # --------------------------------------------------

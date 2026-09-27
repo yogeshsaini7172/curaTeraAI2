@@ -58,12 +58,20 @@ def login():
         return jsonify({'message': 'Invalid credentials'}), 401
 
     # Generate JWT Token
+    role = user.get('role', 'user')
     token = jwt.encode({
         'email': user['email'],
+        'role': role,
         'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=20)
     }, SECRET_KEY, algorithm="HS256")
 
-    #store fcm token of user
-    users_collection.update_one({'email': email}, {'$set': {'fcm_token': fcm_token}})
+    # store fcm token of user if provided
+    if fcm_token:
+        users_collection.update_one({'email': email}, {'$set': {'fcm_token': fcm_token}})
 
-    return jsonify({'token': token, 'message': 'Login successful'}), 200
+    return jsonify({
+        'token': token,
+        'email': user['email'],
+        'role': role,
+        'message': 'Login successful'
+    }), 200
