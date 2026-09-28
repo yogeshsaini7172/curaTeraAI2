@@ -1,3 +1,16 @@
+# ── Core Framework ─────────────────────────────────────────────────────────────
+Flask
+Flask-Cors
+python-dotenv
+
+# ── Authentication & Security ───────────────────────────────────────────────────
+PyJWT
+werkzeug
+
+# ── Database ────────────────────────────────────────────────────────────────────
+pymongo
+
+# ── LangChain / LangGraph (AI Orchestration) ───────────────────────────────────
 langchain
 langchain-core
 langchain-community
@@ -5,20 +18,28 @@ langchain-huggingface
 langchain-groq
 langgraph
 langgraph-checkpoint-mongodb
-pymongo
-pydantic
+
+# ── ML / Embeddings ────────────────────────────────────────────────────────────
 sentence-transformers
-pandas
 faiss-cpu
-requests
-Flask
-Flask-Cors
-PyJWT
-numpy
+pandas
+pydantic
 scikit-learn
-python-dotenv
+
+# ── Text-to-Speech ──────────────────────────────────────────────────────────────
+edge-tts
+gTTS
+websockets
+
+# ── Document Handling ──────────────────────────────────────────────────────────
 pypdf
+
+# ── Firebase (FCM push notifications) ─────────────────────────────────────────
 firebase-admin
+
+# ── HTTP / Networking ───────────────────────────────────────────────────────────
+requests
 chromadb
 transformers
 torch
+numpy
