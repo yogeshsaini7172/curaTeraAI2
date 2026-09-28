@@ -175,6 +175,7 @@ def format_retrieved_scheme(doc):
         "applicationProcessHi": application_process_hi,
         "officialUrl": official_url,
         "helplinePhone": "1800115555",
+        "imageUrl": doc.get("image_url", ""),
         "themeColor": "#0F172A",
         "themeLight": "#F8FAFC",
         "themeDark": "#0F172A"
@@ -536,4 +537,53 @@ def add_scheme():
         "message": f"Scheme {scheme_id} added and translated to Hindi successfully!",
         "scheme": formatted
     }), 201
+
+@schemes_bp.route('/upload-image', methods=['POST'])
+def upload_scheme_image():
+    """
+    Admin endpoint to upload an image for a specific scheme card.
+    Updates scheme_full.json with the Cloudinary URL.
+    """
+    scheme_id = request.form.get('scheme_id')
+    if not scheme_id:
+        return jsonify({'message': 'No scheme_id provided'}), 400
+        
+    if 'image' not in request.files:
+        return jsonify({'message': 'No image file provided'}), 400
+        
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'message': 'No selected file'}), 400
+        
+    try:
+        from app.utils.cloudinary_upload import upload_image_to_cloudinary
+        image_url = upload_image_to_cloudinary(file, folder="curatera_schemes")
+        
+        if not image_url:
+            return jsonify({'message': 'Failed to upload image to Cloudinary'}), 500
+            
+        full_docs = get_full_schemes()
+        updated = False
+        
+        for doc in full_docs:
+            if doc.get("scheme_id") == scheme_id:
+                doc["image_url"] = image_url
+                updated = True
+                break
+                
+        if updated:
+            with open(FULL_SCHEMES_PATH, "w", encoding="utf-8") as f:
+                json.dump(full_docs, f, ensure_ascii=False, indent=2)
+                
+            return jsonify({
+                'message': 'Scheme image updated successfully',
+                'imageUrl': image_url,
+                'scheme_id': scheme_id
+            }), 200
+        else:
+            return jsonify({'message': 'Scheme not found'}), 404
+            
+    except Exception as e:
+        print(f"Scheme Image Upload Error: {e}")
+        return jsonify({'message': 'An error occurred uploading the image.', 'error': str(e)}), 500
 
