@@ -1,19 +1,18 @@
 from pathlib import Path
 from functools import lru_cache
 
-from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
 
 from rag.embeddings import get_embeddings
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-VECTORSTORE_PATH = PROJECT_ROOT / "vectorstore"
+VECTORSTORE_PATH = Path("chroma_db")
 
 
 @lru_cache(maxsize=1)
 def load_vectorstore():
     """
-    Load FAISS only once and reuse it.
+    Load Chroma only once and reuse it.
     """
 
     if not VECTORSTORE_PATH.exists():
@@ -33,10 +32,9 @@ def load_vectorstore():
 
     embeddings = get_embeddings()
 
-    vectorstore = FAISS.load_local(
-        str(VECTORSTORE_PATH),
-        embeddings,
-        allow_dangerous_deserialization=True
+    vectorstore = Chroma(
+        persist_directory=str(VECTORSTORE_PATH),
+        embedding_function=embeddings
     )
 
     return vectorstore
@@ -56,12 +54,9 @@ def retrieve_documents(
 
     if scheme_id:
 
-        fetch_k = vectorstore.index.ntotal
-
         documents = vectorstore.similarity_search(
             query,
             k=k,
-            fetch_k=fetch_k,
             filter={
                 "scheme_id": scheme_id
             }

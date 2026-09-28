@@ -3531,25 +3531,24 @@ def profile_node(state: CuraTerraState):
         ""
     )
 
-    current_profile = state.get(
-        "citizen_profile",
-        {}
-    )
+    current_profile = state.get("citizen_profile", {})
 
     result = get_profile_agent_response(
         user_input=user_query,
         current_profile=current_profile
     )
 
-    old_profile = current_profile
+    # Profile agent returns the merged profile.
+    # Keep a defensive merge here as well.
+    updated_fields = result.get("profile", {})
 
-    new_profile = result.get(
-        "profile",
-        {}
-    )
+    new_profile = {
+        **current_profile,
+        **updated_fields,
+    }
 
     profile_changed = (
-        old_profile != new_profile
+        current_profile != new_profile
     )
 
     profile_complete, missing_information = (

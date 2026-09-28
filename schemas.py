@@ -17,11 +17,11 @@ class CitizenProfile(BaseModel):
     disability_status: Optional[bool] = None
     transgender_status: Optional[bool] = None
 
-    annual_family_income: Optional[float] = None
+    annual_family_income: Optional[str] = None
 
     occupation: Optional[str] = None
     farmer_status: Optional[bool] = None
-    land_holding: Optional[float] = None
+    land_holding: Optional[str] = None
 
     education_level: Optional[str] = None
     school_class: Optional[int] = None

@@ -39,3 +39,7 @@ firebase-admin
 
 # ── HTTP / Networking ───────────────────────────────────────────────────────────
 requests
+chromadb
+transformers
+torch
+numpy

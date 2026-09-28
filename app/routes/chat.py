@@ -1,10 +1,13 @@
 from flask import request, jsonify
 from app.utils.auth_middleware import token_required
+from models.user import users_collection
 from agents.graph import build_graph
+from app.utils.profile_helper import get_unified_profile, update_unified_profile
 from . import chat_bp
 
 # Build the LangGraph state machine once
 graph = build_graph()
+
 
 @chat_bp.route('/api/chat/message', methods=['POST'])
 @token_required
@@ -24,6 +27,9 @@ def chat_message(current_user):
     }
 
     try:
+        # Pre-sync: Ensure LangGraph state and MongoDB are 100% unified before invoking the graph
+        get_unified_profile(graph, current_user['email'])
+
         # Invoke LangGraph just like in app.py
         result = graph.invoke(
             {"user_query": user_message}, 
@@ -42,11 +48,21 @@ def chat_message(current_user):
             blocks = []
             citations = []
 
-        # Return the AI response without the raw profile data
+        # The graph's profile_node has already merged and saved the profile
+        # into LangGraph state. Just read it — no need to re-update.
+        unified_profile = get_unified_profile(graph, current_user['email'])
+
+        if result.get("profile_changed"):
+            blocks.append({
+                "type": "profile_confirmation",
+                "data": unified_profile
+            })
+
         return jsonify({
             'message': ai_message,
             'blocks': blocks,
-            'citations': citations
+            'citations': citations,
+            'citizen_profile': unified_profile
         }), 200
 
     except Exception as e:

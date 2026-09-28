@@ -5,6 +5,14 @@ import os
 
 load_dotenv()  # Load environment variables from .env file
 
+# Initialize Firebase Admin SDK once at startup
+import firebase_admin
+from firebase_admin import credentials as fb_credentials
+
+if not firebase_admin._apps:
+    _cred = fb_credentials.Certificate(os.path.join(os.path.dirname(__file__), 'firebase-adminsdk.json'))
+    firebase_admin.initialize_app(_cred)
+
 from app.routes import auth_bp, chat_bp, profile_bp
 from app.routes.schemes import schemes_bp
 from app.routes.tts import tts_bp

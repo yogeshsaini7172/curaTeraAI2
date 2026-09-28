@@ -1,13 +1,12 @@
 from pathlib import Path
 
-from langchain_community.vectorstores import FAISS
+from langchain_chroma import Chroma
 
 from rag.ingestion import load_rag_documents
 from rag.embeddings import get_embeddings
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-VECTORSTORE_PATH = PROJECT_ROOT / "vectorstore"
+VECTORSTORE_PATH = Path("chroma_db")
 
 
 def build_vectorstore():
@@ -22,23 +21,20 @@ def build_vectorstore():
 
     embeddings = get_embeddings()
 
-    print("Creating FAISS vector store...")
-
-    vectorstore = FAISS.from_documents(
-        documents,
-        embeddings
-    )
+    print("Creating Chroma vector store...")
 
     VECTORSTORE_PATH.mkdir(
         parents=True,
         exist_ok=True
     )
 
-    vectorstore.save_local(
-        str(VECTORSTORE_PATH)
+    vectorstore = Chroma.from_documents(
+        documents=documents,
+        embedding=embeddings,
+        persist_directory=str(VECTORSTORE_PATH)
     )
 
-    print("FAISS vector store created successfully.")
+    print("Chroma vector store created successfully.")
     print(f"Saved to: {VECTORSTORE_PATH.resolve()}")
 
 
