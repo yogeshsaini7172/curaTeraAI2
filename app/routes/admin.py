@@ -391,3 +391,42 @@ def delete_scheme(scheme_id):
         return jsonify({'success': True, 'message': 'Scheme deleted successfully'}), 200
     except Exception as e:
         return jsonify({'message': f'Failed to delete: {str(e)}'}), 500
+
+
+@admin_bp.route('/users', methods=['GET'])
+def list_users():
+    admin, err = verify_admin(request)
+    if err:
+        return jsonify({'message': err}), 401
+
+    try:
+        users = list(users_collection.find({}, {'_id': 0, 'password': 0, 'reset_otp': 0, 'otp_expiry': 0}))
+        return jsonify({'success': True, 'users': users}), 200
+    except Exception as e:
+        return jsonify({'message': f'Failed to fetch users: {str(e)}'}), 500
+
+
+@admin_bp.route('/users/<email>', methods=['DELETE'])
+def delete_user(email):
+    admin, err = verify_admin(request)
+    if err:
+        return jsonify({'message': err}), 401
+
+    try:
+        user = users_collection.find_one({'email': email})
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        user_name = user.get('name', 'User')
+
+        # 1. Send Account Deletion SMTP Email before/during deletion
+        from app.utils.email_service import send_account_deleted_email
+        send_account_deleted_email(email, user_name)
+
+        # 2. Delete user from MongoDB
+        users_collection.delete_one({'email': email})
+
+        return jsonify({'success': True, 'message': f'User {email} deleted successfully and notification email sent'}), 200
+    except Exception as e:
+        return jsonify({'message': f'Failed to delete user: {str(e)}'}), 500
+

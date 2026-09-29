@@ -215,6 +215,24 @@ def get_rules_df():
             print(f"Error loading eligibility rules: {e}")
     return _RULES_DF
 
+# Keys that should NOT be passed to the ML eligibility engine.
+# These are stale mapped/aliased keys that were being carried over between sessions,
+# causing INFORMATION rules to falsely pass (actual is not None → True).
+_STALE_KEYS = {
+    'occupation_or_beneficiary_type', 'income_limit', 'income',
+    'residency', 'special_condition', 'asset_or_financial_condition',
+}
+
+def clean_profile_for_engine(profile: dict) -> dict:
+    """
+    Returns a clean copy of the profile with ONLY the real user data.
+    Removes all stale mapped keys so they can't falsely pass INFORMATION rules.
+    This must match the exact profile the chatbot's eligibility_agent sends.
+    """
+    if not profile:
+        return {}
+    return {k: v for k, v in profile.items() if k not in _STALE_KEYS}
+
 def is_profile_proper(profile):
     """
     Real-world eligibility validation:
@@ -225,7 +243,7 @@ def is_profile_proper(profile):
     if not profile or not isinstance(profile, dict):
         return False
         
-    for k in ('age', 'occupation', 'annualIncome', 'income', 'state', 'social_category', 'category', 'eligibleSchemeIds', 'eligible_schemes'):
+    for k in ('age', 'occupation', 'annual_family_income', 'annualIncome', 'state', 'social_category', 'category'):
         val = profile.get(k)
         if val is not None and str(val).strip() not in ('', 'None', 'null', '[]', '{}'):
             return True
@@ -258,18 +276,14 @@ def evaluate_schemes_for_profile(schemes_list, profile):
             eligible_ids.add(s_val.lower())
 
     # 2. Run deterministic eligibility rules engine against the citizen's profile
+    # This EXACTLY matches the logic inside eligibility_agent.py
     rules_df = get_rules_df()
     if rules_df is not None:
         try:
-            eval_profile = dict(profile)
-            if 'annualIncome' in profile and 'income' not in eval_profile:
-                eval_profile['income'] = profile['annualIncome']
-            if 'category' in profile and 'social_category' not in eval_profile:
-                eval_profile['social_category'] = profile['category']
-            if 'isStudent' in profile and 'education' not in eval_profile:
-                eval_profile['education'] = 'student' if profile['isStudent'] else 'other'
-
-            results = evaluate_all_schemes(eval_profile, rules_df)
+            # Use clean profile to exactly match what chatbot's eligibility_agent sends.
+            # No stale keys allowed — they cause false-positive INFORMATION rule matches.
+            clean_profile = clean_profile_for_engine(profile)
+            results = evaluate_all_schemes(clean_profile, rules_df)
             for res in results:
                 if res.get('status') == 'eligible':
                     sid = str(res.get('scheme_id', '')).strip()
@@ -292,6 +306,7 @@ def evaluate_schemes_for_profile(schemes_list, profile):
         s['matchPercentage'] = 100 if is_eligible else 0
         
     return schemes_list
+
 
 @schemes_bp.route('', methods=['GET'])
 @schemes_bp.route('/', methods=['GET'])

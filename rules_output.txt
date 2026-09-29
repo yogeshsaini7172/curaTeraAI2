@@ -1,0 +1,20 @@
+
+--- RULES FOR S004 ---
+education (INFORMATION) -> 1\.  The applicant should have passed Class 8th.
+age (INFORMATION) -> 2\.  The applicant should be above the age of 18 years.
+education (INFORMATION) -> Note 1:** A class will have a minimum of 10 trainees and a maximum of 30.
+age (INFORMATION) -> Note 2:** In case the number of eligible candidates exceeds the requirement of a batch and there is a requirement of additional batches, the Implementing Agency will concurrently or in phases run more batches depending on its institutional capacity.
+age (INFORMATION) -> Note 3:** In case of phasing, the scheduling of candidates between batches will be on first-cum-first-admitted basis. The Implementing Agency will maintain a register of applications which will also indicate the date of receipt of each.
+
+--- RULES FOR S031 ---
+education (INFORMATION) -> All the educational institutes in Goa, affiliated with a recognized public university are eligible to apply for this scheme.
+
+--- RULES FOR S042 ---
+education (INFORMATION) -> The student must have secured 60% or more marks in the 12th standard.
+age (INFORMATION) -> The girl must reside in a rural area and possess a "Gaon Ki Beti" (Daughter of the Village) certificate.
+education (INFORMATION) -> She must be enrolled in a recognized institution for higher education.
+
+--- RULES FOR S043 ---
+gender (INFORMATION) -> The applicant should be a girl.
+education (INFORMATION) -> The applicant should be a student.
+education (INFORMATION) -> The applicant should be studying in class VIII(8) in Government School of the UT of Dadra & Nagar Haveli and Daman & Diu.
