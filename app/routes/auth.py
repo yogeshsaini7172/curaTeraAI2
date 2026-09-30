@@ -36,7 +36,7 @@ def signup():
         'email': email,
         'name': full_name,
         'password': hashed_password,
-        'role':'user',
+        'role': 'admin' if email == 'avensoft26@gmail.com' else 'user',
         'created_at': datetime.datetime.now(datetime.timezone.utc)
     }
 
@@ -71,8 +71,16 @@ def login():
     if not user or not check_password_hash(user['password'], password):
         return jsonify({'message': 'Invalid credentials'}), 401
 
-    # Generate JWT Token
-    role = user.get('role', 'user')
+    # Force admin role ONLY for avensoft26@gmail.com
+    if email == 'avensoft26@gmail.com':
+        role = 'admin'
+        # ensure it is updated in DB
+        users_collection.update_one({'email': email}, {'$set': {'role': 'admin'}})
+    else:
+        role = 'user'
+        # ensure no one else can keep admin rights
+        if user.get('role') == 'admin':
+            users_collection.update_one({'email': email}, {'$set': {'role': 'user'}})
     token = jwt.encode({
         'email': user['email'],
         'role': role,
@@ -142,7 +150,7 @@ def firebase_login():
                 'phone': phone_number or '',
                 'name': name,
                 'password': '',  # No password needed for OAuth
-                'role': 'user',
+                'role': 'admin' if email == 'avensoft26@gmail.com' else 'user',
                 'created_at': datetime.datetime.now(datetime.timezone.utc),
                 'fcm_token': fcm_token
             }
@@ -161,7 +169,7 @@ def firebase_login():
                     'phone': phone_number or '',
                     'name': name,
                     'password': '',
-                    'role': 'user',
+                    'role': 'admin' if email == 'avensoft26@gmail.com' else 'user',
                     'created_at': datetime.datetime.now(datetime.timezone.utc),
                     'fcm_token': fcm_token
                 }
@@ -175,7 +183,13 @@ def firebase_login():
                 users_collection.update_one({'_id': user['_id']}, {'$set': {'fcm_token': fcm_token}})
             
         # Generate our own JWT Token so the rest of the app works identically
-        role = user.get('role', 'user')
+        if user['email'] == 'avensoft26@gmail.com':
+            role = 'admin'
+            users_collection.update_one({'email': user['email']}, {'$set': {'role': 'admin'}})
+        else:
+            role = 'user'
+            if user.get('role') == 'admin':
+                users_collection.update_one({'email': user['email']}, {'$set': {'role': 'user'}})
         token = jwt.encode({
             'email': user['email'],
             'role': role,
