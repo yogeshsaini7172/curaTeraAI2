@@ -7,6 +7,10 @@
 # from langgraph.graph import StateGraph, START, END
 
 # from agents.state import CuraTerraState
+from services.identity_verifier import (
+    verify_demo_identity
+)
+
 # from schemas import QueryPlan
 # from memory.checkpointer import checkpointer
 
@@ -1610,6 +1614,10 @@
 # from langgraph.graph import StateGraph, START, END
 
 # from agents.state import CuraTerraState
+from services.identity_verifier import (
+    verify_demo_identity
+)
+
 # from schemas import QueryPlan
 # from memory.checkpointer import checkpointer
 
@@ -3289,6 +3297,10 @@ from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 
 from agents.state import CuraTerraState
+from services.identity_verifier import (
+    verify_demo_identity
+)
+
 from schemas import QueryPlan
 from memory.checkpointer import checkpointer
 
@@ -3669,6 +3681,80 @@ def profile_node(state: CuraTerraState):
         "task_index": 0,
     }
 
+
+# ============================================================
+# IDENTITY VERIFICATION NODE
+# ============================================================
+
+def identity_verification_node(
+    state: CuraTerraState
+):
+
+    aadhaar_demo_id = state.get(
+        "identity_verification_input"
+    )
+
+    profile = state.get(
+        "citizen_profile",
+        {}
+    )
+
+    if not aadhaar_demo_id:
+
+        return {
+            "identity_verified": False,
+
+            "identity_verification_required": True,
+
+            "identity_verification_result": {
+                "verified": False,
+                "reason": "No Aadhaar demo ID was provided."
+            }
+        }
+
+    result = verify_demo_identity(
+        aadhaar_demo_id=aadhaar_demo_id,
+        profile=profile
+    )
+
+    if result.get("verified"):
+
+        return {
+            "identity_verified": True,
+
+            "identity_verification_required": False,
+
+            "identity_verification_result": result,
+
+            # Clear the input after verification
+            "identity_verification_input": None,
+
+            "execution_mode": "profile_completion",
+
+            "task_index": 0,
+        }
+
+    return {
+        "identity_verified": False,
+
+        "identity_verification_required": True,
+
+        "identity_verification_result": result,
+
+        "identity_verification_input": None,
+    }
+
+def route_after_identity_verification(
+    state: CuraTerraState
+) -> str:
+
+    if state.get(
+        "identity_verified",
+        False
+    ):
+        return "eligibility"
+
+    return "finalize"
 
 # ============================================================
 # ELIGIBILITY NODE
@@ -4522,13 +4608,29 @@ def route_from_start(
     state: CuraTerraState
 ) -> str:
 
+    # A verification button submitted data
     if state.get(
+        "identity_verification_input"
+    ):
+        return "identity_verification"
+
+    if not state.get(
         "profile_complete",
         False
     ):
-        return "planner"
+        return "profile"
 
-    return "profile"
+    if not state.get(
+        "identity_verified",
+        False
+    ):
+        return "finalize"
+
+    user_query = state.get("user_query", "").lower()
+    if "profile" in user_query or "change" in user_query or "update" in user_query:
+        return "profile"
+
+    return "planner"
 
 
 # ============================================================
@@ -4545,13 +4647,20 @@ def route_after_profile(
     ):
         return "finalize"
 
-    if state.get(
+    if not state.get(
         "profile_complete",
         False
     ):
-        return "eligibility"
+        return "finalize"
 
-    return "finalize"
+    # Profile complete but identity not verified
+    if not state.get(
+        "identity_verified",
+        False
+    ):
+        return "finalize"
+
+    return "eligibility"
 
 
 # ============================================================
@@ -4638,6 +4747,130 @@ def route_after_recommendation(
 def finalize_node(
     state: CuraTerraState
 ):
+
+    # ============================================================
+    # IDENTITY VERIFICATION REQUIRED
+    # ============================================================
+
+    if (
+        state.get("profile_complete", False)
+        and not state.get("identity_verified", False)
+        and not state.get("identity_verification_result")
+    ):
+
+        profile = state.get(
+            "citizen_profile",
+            {}
+        )
+
+        return {
+            "final_response": {
+                "message": (
+                    "Before I can create your personalized "
+                    "government-scheme profile, I need to "
+                    "verify your identity. 🔐"
+                ),
+
+                "blocks": [
+                    {
+                        "type": "identity_verification",
+
+                        "data": {
+                            "required": True,
+
+                            "name": profile.get(
+                                "name"
+                            ),
+
+                            "age": profile.get(
+                                "age"
+                            ),
+
+                            "gender": profile.get(
+                                "gender"
+                            ),
+
+                            "state": profile.get(
+                                "state"
+                            ),
+
+                            "district": profile.get(
+                                "district"
+                            )
+                        }
+                    }
+                ],
+
+                "citations": [],
+
+                "profile": profile,
+
+                "metadata": {
+                    "intent": "identity_verification",
+
+                    "requires_identity_verification": True
+                }
+            }
+        }
+
+    verification_result = state.get(
+        "identity_verification_result"
+    )
+
+    if (
+        verification_result
+        and not verification_result.get(
+            "verified",
+            False
+        )
+    ):
+
+        return {
+            "final_response": {
+                "message": (
+                    "❌ Identity verification was not successful.\n\n"
+                    "Some identity details did not match your "
+                    "provided profile information. Please check "
+                    "the details and try again."
+                ),
+
+                "blocks": [
+                    {
+                        "type": "identity_verification",
+
+                        "data": {
+                            "required": True,
+
+                            "matched_fields":
+                                verification_result.get(
+                                    "matched_fields",
+                                    []
+                                ),
+
+                            "failed_fields":
+                                verification_result.get(
+                                    "failed_fields",
+                                    []
+                                )
+                        }
+                    }
+                ],
+
+                "citations": [],
+
+                "profile": state.get(
+                    "citizen_profile",
+                    {}
+                ),
+
+                "metadata": {
+                    "intent": "identity_verification",
+
+                    "verification_failed": True
+                }
+            }
+        }
+
 
     outputs = state.get(
         "agent_outputs",
@@ -4804,6 +5037,11 @@ def build_graph():
     )
 
     builder.add_node(
+        "identity_verification",
+        identity_verification_node
+    )
+
+    builder.add_node(
         "planner",
         planner_node
     )
@@ -4852,7 +5090,9 @@ def build_graph():
         route_from_start,
         {
             "profile": "profile",
+            "identity_verification": "identity_verification",
             "planner": "planner",
+            "finalize": "finalize",
         }
     )
 
@@ -4863,6 +5103,15 @@ def build_graph():
     builder.add_conditional_edges(
         "profile",
         route_after_profile,
+        {
+            "eligibility": "eligibility",
+            "finalize": "finalize",
+        }
+    )
+
+    builder.add_conditional_edges(
+        "identity_verification",
+        route_after_identity_verification,
         {
             "eligibility": "eligibility",
             "finalize": "finalize",

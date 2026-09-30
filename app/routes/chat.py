@@ -30,9 +30,22 @@ def chat_message(current_user):
         # Pre-sync: Ensure LangGraph state and MongoDB are 100% unified before invoking the graph
         get_unified_profile(graph, current_user['email'])
 
+        state = graph.get_state(config)
+        
+        is_pending_verification = False
+        if state and state.values:
+            if state.values.get("profile_complete") and not state.values.get("identity_verified"):
+                is_pending_verification = True
+
+        invoke_data = {"user_query": user_message}
+        
+        # If they are blocked by verification, treat any chat message as an Aadhaar ID input
+        if is_pending_verification:
+            invoke_data["identity_verification_input"] = user_message.strip()
+
         # Invoke LangGraph just like in app.py
         result = graph.invoke(
-            {"user_query": user_message}, 
+            invoke_data, 
             config=config
         )
         
@@ -52,11 +65,20 @@ def chat_message(current_user):
         # into LangGraph state. Just read it — no need to re-update.
         unified_profile = get_unified_profile(graph, current_user['email'])
 
-        if result.get("profile_changed"):
+        unified_profile = get_unified_profile(graph, current_user['email'])
+
+        # Only show profile confirmation if we are not blocking for identity verification
+        identity_req = result.get("identity_verification_required", False)
+        
+        if result.get("profile_changed") and not identity_req:
             blocks.append({
                 "type": "profile_confirmation",
                 "data": unified_profile
             })
+
+        # Ensure profile_changed is reset in state so it doesn't loop
+        if result.get("profile_changed"):
+            graph.update_state(config, {"profile_changed": False})
 
         return jsonify({
             'message': ai_message,
@@ -115,3 +137,66 @@ def get_chat_history(current_user):
     except Exception as e:
         print(f"History Error: {e}")
         return jsonify({'error': str(e)}), 500
+
+@chat_bp.route('/api/verify-identity', methods=['POST'])
+@token_required
+def verify_identity(current_user):
+    data = request.get_json(silent=True) or {}
+    aadhaar_demo_id = data.get("aadhaar_demo_id")
+
+    if not aadhaar_demo_id:
+        return jsonify({"error": "aadhaar_demo_id is required"}), 400
+
+    config = {
+        "configurable": {
+            "thread_id": current_user['email']
+        }
+    }
+
+    try:
+        # Pre-sync
+        get_unified_profile(graph, current_user['email'])
+
+        result = graph.invoke(
+            {
+                "identity_verification_input": aadhaar_demo_id,
+                "user_query": ""
+            },
+            config=config
+        )
+        
+        final_response_dict = result.get("final_response", {})
+        
+        # If the final_response is a dictionary, extract it
+        if isinstance(final_response_dict, dict):
+            ai_message = final_response_dict.get("message", "No message generated.")
+            blocks = final_response_dict.get("blocks", [])
+            citations = final_response_dict.get("citations", [])
+        else:
+            ai_message = final_response_dict
+            blocks = []
+            citations = []
+
+        unified_profile = get_unified_profile(graph, current_user['email'])
+
+        identity_req = result.get("identity_verification_required", False)
+        if result.get("profile_changed") and not identity_req:
+            blocks.append({
+                "type": "profile_confirmation",
+                "data": unified_profile
+            })
+
+        if result.get("profile_changed"):
+            graph.update_state(config, {"profile_changed": False})
+
+        return jsonify({
+            'message': ai_message,
+            'blocks': blocks,
+            'citations': citations,
+            'citizen_profile': unified_profile
+        }), 200
+
+    except Exception as e:
+        print(f"Verify Identity Error: {e}")
+        return jsonify({'message': 'An error occurred.', 'error': str(e)}), 500
+

@@ -14,6 +14,13 @@ class CuraTerraState(TypedDict, total=False):
     missing_information: list[str]
     validation_issues: list[str]
 
+    # Identity Verification
+    identity_verified: bool
+    identity_verification_required: bool
+    identity_verification_input: str | None
+    identity_verification_result: dict
+
+
     # Execution
     execution_mode: str
 
