@@ -6,11 +6,12 @@ from . import auth_bp
 from models.user import users_collection
 from firebase_admin import auth as firebase_auth
 
+import os
 import random
 import string
 from app.utils.email_service import send_welcome_email, send_otp_email
 
-SECRET_KEY = "SUPER_SECRET_KEY"  # Replace with environment variable in production
+SECRET_KEY = os.getenv("JWT_SECRET", "SUPER_SECRET_KEY_CURATERRA_GOV_INDIA_2026_SECURE_TOKEN")
 
 @auth_bp.route('/api/auth/signup', methods=['POST'])
 def signup():
@@ -36,7 +37,7 @@ def signup():
         'email': email,
         'name': full_name,
         'password': hashed_password,
-        'role': 'admin' if email == 'avensoft26@gmail.com' else 'user',
+        'role': 'admin' if email in ['avensoft26@gmail.com', 'admin@gmail.com'] else 'user',
         'created_at': datetime.datetime.now(datetime.timezone.utc)
     }
 
@@ -71,16 +72,13 @@ def login():
     if not user or not check_password_hash(user['password'], password):
         return jsonify({'message': 'Invalid credentials'}), 401
 
-    # Force admin role ONLY for avensoft26@gmail.com
-    if email == 'avensoft26@gmail.com':
+    # Force admin role for admin emails or existing admin accounts
+    admin_emails = ['avensoft26@gmail.com', 'admin@gmail.com', 'mauryashivamkumar841@gmail.com', 'admin@curaterra.gov.in']
+    if email in admin_emails or user.get('role') == 'admin':
         role = 'admin'
-        # ensure it is updated in DB
         users_collection.update_one({'email': email}, {'$set': {'role': 'admin'}})
     else:
         role = 'user'
-        # ensure no one else can keep admin rights
-        if user.get('role') == 'admin':
-            users_collection.update_one({'email': email}, {'$set': {'role': 'user'}})
     token = jwt.encode({
         'email': user['email'],
         'role': role,

@@ -1,9 +1,10 @@
 from flask import Flask
 from flask_cors import CORS
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path=env_path)  # Load environment variables from .env file explicitly
 
 # Initialize Firebase Admin SDK once at startup
 import firebase_admin

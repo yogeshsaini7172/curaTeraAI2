@@ -2,6 +2,7 @@ from langchain.messages import HumanMessage
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
+from pathlib import Path
 from ml.eligibility.rule_parser import load_rules
 from ml.eligibility.engine import evaluate_all_schemes
 
@@ -17,7 +18,8 @@ load_dotenv()
 # LOAD ALL ELIGIBILITY RULES
 # ============================================================
 
-RULES_PATH = "data/processed/eligibility_rules.csv"
+BASE_DIR = Path(__file__).resolve().parent.parent
+RULES_PATH = str(BASE_DIR / "data" / "processed" / "eligibility_rules.csv")
 
 rules = load_rules(RULES_PATH)
 

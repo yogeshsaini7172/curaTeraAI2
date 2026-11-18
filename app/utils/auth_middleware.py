@@ -1,8 +1,12 @@
 import jwt
+import os
 from functools import wraps
 from flask import request, jsonify
-from app.routes.auth import SECRET_KEY
 from models.user import users_collection
+from firebase_admin import auth as firebase_auth
+import datetime
+
+SECRET_KEY = os.getenv("JWT_SECRET", "SUPER_SECRET_KEY_CURATERRA_GOV_INDIA_2026_SECURE_TOKEN")
 
 def token_required(f):
     @wraps(f)
@@ -18,20 +22,51 @@ def token_required(f):
             else:
                 token = auth_header
 
-        if not token:
-            return jsonify({'message': 'Token is missing!'}), 401
+        current_user = None
 
-        try:
-            # Decode the JWT
-            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            # Fetch the current user from the database
-            current_user = users_collection.find_one({'email': data['email']})
+        if token:
+            # 1. Try decoding as application HS256 JWT
+            try:
+                data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+                user_email = data.get('email')
+                if user_email:
+                    current_user = users_collection.find_one({'email': user_email})
+                    if not current_user:
+                        current_user = {
+                            'email': user_email,
+                            'name': user_email.split('@')[0],
+                            'role': data.get('role', 'user')
+                        }
+            except Exception:
+                pass
+
+            # 2. Try decoding as Firebase ID token (from Google Sign-In)
             if not current_user:
-                return jsonify({'message': 'Token is invalid: User does not exist!'}), 401
-        except jwt.ExpiredSignatureError:
-            return jsonify({'message': 'Token has expired!'}), 401
-        except Exception as e:
-            return jsonify({'message': 'Token is invalid!'}), 401
+                try:
+                    decoded = firebase_auth.verify_id_token(token)
+                    fb_email = decoded.get('email') or f"{decoded.get('phone_number', 'citizen').replace('+', '')}@curatera.local"
+                    current_user = users_collection.find_one({'email': fb_email})
+                    if not current_user:
+                        current_user = {
+                            'email': fb_email,
+                            'name': decoded.get('name', fb_email.split('@')[0]),
+                            'role': 'user',
+                            'created_at': datetime.datetime.now(datetime.timezone.utc)
+                        }
+                        users_collection.insert_one(current_user)
+                except Exception:
+                    pass
+
+        # 3. For chat endpoints: allow guest citizen session if unauthenticated
+        if not current_user:
+            if request.path.startswith('/api/chat'):
+                current_user = {
+                    'email': 'guest_citizen@curatera.gov.in',
+                    'name': 'Citizen Guest',
+                    'role': 'user'
+                }
+            else:
+                return jsonify({'message': 'Authentication required. Token is missing or invalid!'}), 401
 
         # Pass the current_user to the route
         return f(current_user, *args, **kwargs)
